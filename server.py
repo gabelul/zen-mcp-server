@@ -468,7 +468,18 @@ def configure_providers():
         if gemini_key and gemini_key != "your_gemini_api_key_here":
             ModelProviderRegistry.register_provider(ProviderType.GOOGLE, GeminiModelProvider)
         if openai_key and openai_key != "your_openai_api_key_here":
-            ModelProviderRegistry.register_provider(ProviderType.OPENAI, OpenAIModelProvider)
+            def openai_provider_factory(api_key=None):
+                base_url = os.getenv("OPENAI_BASE_URL")
+                # Use provided API key or read from env again
+                final_api_key = api_key or os.getenv("OPENAI_API_KEY")
+                
+                provider_kwargs = {"api_key": final_api_key}
+                if base_url:
+                    provider_kwargs["base_url"] = base_url
+                
+                return OpenAIModelProvider(**provider_kwargs)
+
+            ModelProviderRegistry.register_provider(ProviderType.OPENAI, openai_provider_factory)
         if xai_key and xai_key != "your_xai_api_key_here":
             ModelProviderRegistry.register_provider(ProviderType.XAI, XAIModelProvider)
         if dial_key and dial_key != "your_dial_api_key_here":
