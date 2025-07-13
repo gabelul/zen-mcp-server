@@ -1,6 +1,8 @@
 """OpenAI model provider implementation."""
 
+import json
 import logging
+import os
 from typing import Optional
 
 from .base import (
@@ -115,7 +117,56 @@ class OpenAIModelProvider(OpenAICompatibleProvider):
         """Initialize OpenAI provider with API key."""
         # Set default OpenAI base URL, allow override for regions/custom endpoints
         kwargs.setdefault("base_url", "https://api.openai.com/v1")
+        
+        # Load custom models from environment variable
+        self._load_custom_models()
+        
         super().__init__(api_key, **kwargs)
+
+    def _load_custom_models(self):
+        """Load custom models from OPENAI_CUSTOM_MODELS environment variable."""
+        custom_models_json = os.getenv("OPENAI_CUSTOM_MODELS")
+        if not custom_models_json:
+            return
+            
+        try:
+            custom_models_data = json.loads(custom_models_json)
+            
+            for model_name, config in custom_models_data.items():
+                # Validate required fields
+                if "context_window" not in config:
+                    logger.warning(f"Custom model '{model_name}' missing required 'context_window' field, skipping")
+                    continue
+                
+                # Create ModelCapabilities with defaults for optional fields
+                model_capabilities = ModelCapabilities(
+                    provider=ProviderType.OPENAI,
+                    model_name=model_name,
+                    friendly_name=f"OpenAI Custom ({model_name})",
+                    context_window=config["context_window"],
+                    max_output_tokens=config.get("max_output_tokens", 4096),
+                    supports_extended_thinking=config.get("supports_extended_thinking", False),
+                    supports_system_prompts=config.get("supports_system_prompts", True),
+                    supports_streaming=config.get("supports_streaming", True),
+                    supports_function_calling=config.get("supports_function_calling", True),
+                    supports_json_mode=config.get("supports_json_mode", True),
+                    supports_images=config.get("supports_images", False),
+                    max_image_size_mb=config.get("max_image_size_mb", 20.0),
+                    supports_temperature=config.get("supports_temperature", True),
+                    temperature_constraint=create_temperature_constraint("range"),
+                    description=config.get("description", f"Custom OpenAI model: {model_name}"),
+                    aliases=config.get("aliases", []),
+                )
+                
+                # Add to SUPPORTED_MODELS (this modifies the class attribute)
+                self.SUPPORTED_MODELS[model_name] = model_capabilities
+                
+                logger.info(f"Loaded custom OpenAI model: {model_name} with aliases: {model_capabilities.aliases}")
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse OPENAI_CUSTOM_MODELS JSON: {e}")
+        except Exception as e:
+            logger.error(f"Error loading custom OpenAI models: {e}")
 
     def get_capabilities(self, model_name: str) -> ModelCapabilities:
         """Get capabilities for a specific OpenAI model."""

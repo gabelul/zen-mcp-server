@@ -311,6 +311,53 @@ isort --check-only .
 - `systemprompts/` - System prompt definitions
 - `logs/` - Server log files
 
+### Custom OpenAI Models
+
+You can add custom models to your OpenAI provider for use with custom endpoints:
+
+#### Using Environment Variable
+```bash
+# Add to .env file
+OPENAI_BASE_URL=https://your-custom-endpoint.com/v1
+OPENAI_CUSTOM_MODELS='{"llama-3.1-405b": {"context_window": 128000, "max_output_tokens": 8192, "aliases": ["llama", "405b"]}, "mistral-large": {"context_window": 32000, "aliases": ["mistral"]}}'
+```
+
+#### Using Interactive Utility
+```bash
+# Run the interactive model manager
+python utils/manage_custom_models.py
+
+# This provides a menu-driven interface to:
+# 1. Add new models with guided prompts
+# 2. List current custom models
+# 3. Remove models
+# 4. Test model configurations
+# 5. Export/import model configurations
+```
+
+#### Custom Model Configuration
+Required fields:
+- `context_window`: Token limit (integer)
+
+Optional fields:
+- `max_output_tokens`: Max response tokens (default: 4096)
+- `aliases`: List of friendly names (default: [])
+- `supports_function_calling`: Boolean (default: true)
+- `supports_streaming`: Boolean (default: true)
+- `supports_images`: Boolean (default: false)
+- `supports_json_mode`: Boolean (default: true)
+- `description`: Model description string
+
+#### Usage Examples
+After configuration, use alias names in MCP tools:
+```bash
+# If you defined aliases: ["llama", "405b"]
+# You can use any of these in tool calls:
+model: "llama-3.1-405b"  # Full name
+model: "llama"           # Alias
+model: "405b"            # Alias
+```
+
 ### Environment Requirements
 
 - Python 3.9+ with virtual environment
@@ -318,3 +365,65 @@ isort --check-only .
 - Proper API keys configured in `.env` file
 
 This guide provides everything needed to efficiently work with the Zen MCP Server codebase using Claude. Always run quality checks before and after making changes to ensure code integrity.
+
+
+# Project Memory Instructions
+
+You have access to a complete memory of this codebase. ALWAYS:
+1. Search for existing implementations before writing new code
+2. Use established patterns found in memory
+3. Check for similar functions to avoid duplication
+4. When debugging, search for similar errors that were fixed before
+5. Follow the coding conventions found in existing code
+
+## Memory Usage Examples
+- Before creating a function: "I found 3 similar validation functions in memory..."
+- When debugging: "This error pattern matches issue fixed in auth.js..."
+- For refactoring: "Memory shows this pattern used in 5 places..."
+
+## Enhanced Memory Graph Functions
+
+### 🎯 Unified Search with entityTypes Filtering (MCP Only)
+- mcp__zenmcp_memory__search_similar("query", entityTypes=["metadata"]) - 90% faster overview search
+- mcp__zenmcp_memory__search_similar("query", entityTypes=["function", "class"]) - Find specific code elements
+- mcp__zenmcp_memory__search_similar("query", entityTypes=["debugging_pattern"]) - Find past error solutions
+- mcp__zenmcp_memory__search_similar("query", entityTypes=["documentation"]) - Search docs only
+- mcp__zenmcp_memory__search_similar("query", entityTypes=["function", "metadata"]) - Mixed search with OR logic
+
+### 📊 Codebase Mapping (with safe limits)
+**General Analysis:**
+- mcp__zenmcp_memory__read_graph(mode="smart", limit=100) - AI overview (max 150 entities)
+- mcp__zenmcp_memory__read_graph(mode="entities", entityTypes=["class"], limit=50) - Filtered components  
+- mcp__zenmcp_memory__read_graph(mode="relationships", limit=200) - Connections (max 300, careful!)
+
+**Entity-Specific (10-20 relations vs 300+):**
+- mcp__zenmcp_memory__read_graph(entity="ClassName", mode="smart") - AI analysis of specific component
+- mcp__zenmcp_memory__read_graph(entity="functionName", mode="relationships") - Direct connections only
+- mcp__zenmcp_memory__read_graph(entity="ServiceName", mode="entities") - Connected components
+
+### 🔍 Implementation Access
+- mcp__zenmcp_memory__get_implementation("name") - Just the code
+- mcp__zenmcp_memory__get_implementation("name", "logical") - Include same-file helpers (max 20)
+- mcp__zenmcp_memory__get_implementation("name", "dependencies") - Include imports/calls (max 30)
+
+## Optimal Debugging Workflow
+
+1. **Fast Discovery**: mcp__zenmcp_memory__search_similar("error", entityTypes=["metadata", "debugging_pattern"])
+2. **Focus Analysis**: mcp__zenmcp_memory__read_graph(entity="ProblemFunction", mode="smart")
+3. **Code Details**: mcp__zenmcp_memory__get_implementation("ProblemFunction", "dependencies")
+4. **Store Solution**: After fixing, add pattern to memory for future
+
+## Memory Power User Shortcuts (Optional)
+
+Add these to your CLAUDE.md for enhanced memory usage:
+
+- "§m" = Use project memory to find implementations, patterns, and architectural decisions
+- "§d" = **Memory-search first for similar patterns, project memory if there is**, replicate the problem first, understand what is the error/problem ((same parameters and context) if you don't sure, ask!), use entity-specific debugging: search_similar to find target entity, then read_graph(entity="EntityName", mode="smart") for focused analysis (10-20 relations vs 300+), read related project logs, then debug deeper to find root cause (problem-focused, not solution-focused), show plan for fixing, if more info needed add debug prints. Don't fix until you made sure your fix will fix the exact same problem, just present findings (after receiving ok, fix with no code duping, check other possible function first, and do a test in the end to make sure this specific problem with this context and parameter solved).
+- "$dup" = Don't duplicate code, check twice if there's a function that already does something similar prior to implementing what you want (use memory to check relations and best practices).
+
+Note: This is my personal workflow that works well with Claude Code Memory.
+Have better shortcuts or workflows? Share them: https://github.com/Durafen/Claude-code-memory/issues
+
+---
+*Auto-generated by claude-indexer add-mcp for collection: zenmcp*
+*MCP Server: zenmcp-memory*
